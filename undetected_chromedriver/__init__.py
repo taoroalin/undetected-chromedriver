@@ -16,7 +16,7 @@ by UltrafunkAmsterdam (https://github.com/ultrafunkamsterdam)
 """
 from __future__ import annotations
 
-
+print("MY CUSTOM CHROMEDRIVEr LOADED")
 __version__ = "3.4.6"
 
 import json
@@ -123,6 +123,7 @@ class Chrome(selenium.webdriver.chrome.webdriver.WebDriver):
         use_subprocess=True,
         debug=False,
         no_sandbox=True,
+        crmux_port=None,
         **kw,
     ):
         """
@@ -270,6 +271,9 @@ class Chrome(selenium.webdriver.chrome.webdriver.WebDriver):
         else:
             debug_host, debug_port = options.debugger_address.split(":")
             debug_port = int(debug_port)
+        debug_port_base = debug_port
+        if crmux_port is not None:
+            debug_port = crmux_port
 
         if enable_cdp_events:
             options.set_capability(
@@ -277,7 +281,7 @@ class Chrome(selenium.webdriver.chrome.webdriver.WebDriver):
             )
 
         options.add_argument("--remote-debugging-host=%s" % debug_host)
-        options.add_argument("--remote-debugging-port=%s" % debug_port)
+        options.add_argument("--remote-debugging-port=%s" % debug_port_base)
 
         if user_data_dir:
             options.add_argument("--user-data-dir=%s" % user_data_dir)
@@ -425,7 +429,11 @@ class Chrome(selenium.webdriver.chrome.webdriver.WebDriver):
                 stderr=subprocess.PIPE,
                 close_fds=IS_POSIX,
             )
+                
             self.browser_pid = browser.pid
+            
+        if crmux_port is not None:
+            self.crmux = subprocess.Popen(f"crmux -p {debug_port} -l {debug_port_base}",text=True,shell=True)
 
         if service_creationflags:
             service = selenium.webdriver.common.service.Service(
